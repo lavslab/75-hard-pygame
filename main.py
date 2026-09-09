@@ -12,7 +12,7 @@ PINK = (255, 220, 235)
 HOT_PINK = (255, 105, 180)
 DARK_PINK = (210, 80, 140)
 
-#create game window
+# create game window
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("75 Hard: Lav Edition")
 
@@ -26,6 +26,9 @@ lav_width = 50
 lav_height = 70
 lav_speed = 5
 
+lav_y_velocity = 0
+gravity = 1
+jump_strength = -15
 
 # ------ main game loop ------
 running = True
@@ -35,7 +38,7 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-# player movement
+    # player movement
     keys = pygame.key.get_pressed()
 
     if keys[pygame.K_LEFT] and lav_x > 0:
@@ -44,22 +47,34 @@ while running:
     if keys[pygame.K_RIGHT] and lav_x < WIDTH - lav_width:
         lav_x += lav_speed
 
-# pink background screen
+    # jump
+    if keys[pygame.K_SPACE] and lav_y == 380:
+        lav_y_velocity = jump_strength
+
+    lav_y_velocity += gravity
+    lav_y += lav_y_velocity
+
+    # keep Lav on the ground
+    if lav_y >= 380:
+        lav_y = 380
+        lav_y_velocity = 0
+
+    # pink background screen
     screen.fill(PINK)
 
-# ground
+    # ground
     pygame.draw.rect(screen, DARK_PINK, (0, 450, WIDTH, 50))
 
-    
-# draw player
+    # draw player
     pygame.draw.rect(
         screen,
-        (255, 105, 180),
+        HOT_PINK,
         (lav_x, lav_y, lav_width, lav_height)
     )
 
     # update after each drawing aka finished frame
     pygame.display.update()
 
-clock.tick(60)
+    clock.tick(60)
+
 pygame.quit()
