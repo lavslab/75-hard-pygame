@@ -15,13 +15,21 @@ DARK_PINK = (210, 80, 140)
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("75 Hard: Lav Edition")
 
-# load player image
-lav_image = pygame.image.load("assets/lav_idle.png").convert_alpha()
+# load front-facing player image
+lav_image = pygame.image.load(
+    "assets/lav_idle.png"
+).convert_alpha()
 
-# resize player image
 lav_image = pygame.transform.scale(lav_image, (70, 100))
 
-# add time clock
+# load one running image
+test_run = pygame.image.load(
+    "assets/lav_sprite_frames/game_ready/run_right/run_right_1.png"
+).convert_alpha()
+
+test_run = pygame.transform.scale(test_run, (70, 100))
+
+# clock
 clock = pygame.time.Clock()
 
 # player settings
@@ -40,16 +48,20 @@ jump_strength = -15
 running = True
 
 while running:
+
+    # close game
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-    # player movement
+    # get keyboard input
     keys = pygame.key.get_pressed()
 
+    # move left
     if keys[pygame.K_LEFT] and lav_x > 0:
         lav_x -= lav_speed
 
+    # move right
     if keys[pygame.K_RIGHT] and lav_x < WIDTH - lav_width:
         lav_x += lav_speed
 
@@ -66,7 +78,9 @@ while running:
         lav_y = 350
         lav_y_velocity = 0
 
-    # pink background screen
+    # ---------------- DRAW EVERYTHING ----------------
+
+    # background
     screen.fill(PINK)
 
     # ground
@@ -76,13 +90,16 @@ while running:
         (0, 450, WIDTH, 50)
     )
 
-    # draw player
-    screen.blit(lav_image, (lav_x, lav_y))
+    # choose which Lav image to draw
+    if keys[pygame.K_LEFT] or keys[pygame.K_RIGHT]:
+        screen.blit(test_run, (lav_x, lav_y))
+    else:
+        screen.blit(lav_image, (lav_x, lav_y))
 
-    # update after each drawing aka finished frame
+    # show finished frame
     pygame.display.update()
 
-    # keep game running at 60 FPS
+    # 60 FPS
     clock.tick(60)
 
 pygame.quit()
