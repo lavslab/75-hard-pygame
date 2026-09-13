@@ -93,10 +93,6 @@ lav_x = 100
 lav_y = 350
 lav_speed = 5
 
-# water bottle position
-water_x = 650
-water_y = 380
-
 # jumping settings
 lav_y_velocity = 0
 gravity = 1
@@ -108,6 +104,13 @@ run_animation_speed = 0.15
 
 jump_animation_index = 0
 jump_animation_speed = 0.12
+
+# water bottle position
+water_x = 650
+water_y = 380
+
+# collectible state
+water_collected = False
 
 # ------ main game loop ------
 running = True
@@ -134,7 +137,6 @@ while running:
     if (keys[pygame.K_RIGHT] or keys[pygame.K_LEFT]) and lav_y == 350:
         run_animation_index += run_animation_speed
 
-        # restart animation after the last frame
         if run_animation_index >= len(run_frames):
             run_animation_index = 0
 
@@ -164,6 +166,27 @@ while running:
     else:
         jump_animation_index = 0
 
+    # ---------------- COLLISION ----------------
+
+    # make invisible rectangles around Lav and the bottle
+    lav_rect = pygame.Rect(
+        lav_x,
+        lav_y,
+        lav_width,
+        lav_height
+    )
+
+    water_rect = pygame.Rect(
+        water_x,
+        water_y,
+        45,
+        70
+    )
+
+    # collect water bottle when Lav touches it
+    if not water_collected and lav_rect.colliderect(water_rect):
+        water_collected = True
+
     # ---------------- DRAW EVERYTHING ----------------
 
     # pink background
@@ -175,6 +198,13 @@ while running:
         DARK_PINK,
         (0, 450, WIDTH, 50)
     )
+
+    # draw water bottle only if it has NOT been collected
+    if not water_collected:
+        screen.blit(
+            water_image,
+            (water_x, water_y)
+        )
 
     # draw Lav
     if lav_y < 350:
@@ -188,10 +218,9 @@ while running:
         screen.blit(current_frame, (lav_x, lav_y))
 
     elif keys[pygame.K_LEFT]:
-        # get the same running frame
+        # Lav is running left
         current_frame = run_frames[int(run_animation_index)]
 
-        # flip it horizontally so Lav faces left
         current_frame = pygame.transform.flip(
             current_frame,
             True,
@@ -203,11 +232,6 @@ while running:
     else:
         # Lav is standing still
         screen.blit(lav_image, (lav_x, lav_y))
-
-        # draw water bottle
-        screen.blit(water_image, (water_x, water_y))
-
-        
 
     # show finished frame
     pygame.display.update()
