@@ -8,7 +8,7 @@ pygame.init()
 WIDTH = 900
 HEIGHT = 500
 
-# the whole level is wider than the screen
+# whole level is wider than the screen
 WORLD_WIDTH = 3000
 
 # colors
@@ -103,7 +103,7 @@ water_image = pygame.transform.scale(
 
 # ---------------- PLAYER SETTINGS ----------------
 
-# Lav's position inside the WORLD
+# Lav's position inside the world
 lav_x = 100
 lav_y = 350
 
@@ -124,14 +124,19 @@ jump_animation_index = 0
 jump_animation_speed = 0.12
 
 
-# ---------------- WATER COLLECTIBLE ----------------
+# ---------------- WATER BOTTLES ----------------
 
-# this is now the bottle's WORLD position
-water_x = 650
-water_y = 380
+# bottle 1
+water_1_x = 650
+water_1_y = 380
+water_1_collected = False
 
-water_collected = False
+# bottle 2 - farther into the world
+water_2_x = 1200
+water_2_y = 380
+water_2_collected = False
 
+# water counter
 water_count = 0
 water_goal = 5
 
@@ -158,11 +163,11 @@ while running:
 
     # ---------------- MOVEMENT ----------------
 
-    # move left through the world
+    # move left through world
     if keys[pygame.K_LEFT] and lav_x > 0:
         lav_x -= lav_speed
 
-    # move right through the world
+    # move right through world
     if keys[pygame.K_RIGHT] and lav_x < WORLD_WIDTH - lav_width:
         lav_x += lav_speed
 
@@ -189,7 +194,7 @@ while running:
     lav_y_velocity += gravity
     lav_y += lav_y_velocity
 
-    # keep Lav on the ground
+    # keep Lav on ground
     if lav_y >= 350:
         lav_y = 350
         lav_y_velocity = 0
@@ -210,21 +215,21 @@ while running:
 
     # ---------------- CAMERA ----------------
 
-    # camera follows Lav once she moves toward the middle
+    # camera follows Lav
     camera_x = lav_x - WIDTH // 2
 
-    # don't let camera go past beginning of world
+    # don't go before beginning of world
     if camera_x < 0:
         camera_x = 0
 
-    # don't let camera go past end of world
+    # don't go past end of world
     if camera_x > WORLD_WIDTH - WIDTH:
         camera_x = WORLD_WIDTH - WIDTH
 
 
     # ---------------- COLLISION ----------------
 
-    # collision uses WORLD positions
+    # Lav's collision box
     lav_rect = pygame.Rect(
         lav_x,
         lav_y,
@@ -232,24 +237,40 @@ while running:
         lav_height
     )
 
-    water_rect = pygame.Rect(
-        water_x,
-        water_y,
+    # bottle 1 collision box
+    water_1_rect = pygame.Rect(
+        water_1_x,
+        water_1_y,
         water_width,
         water_height
     )
 
-    # collect bottle
-    if not water_collected and lav_rect.colliderect(water_rect):
-        water_collected = True
+    # bottle 2 collision box
+    water_2_rect = pygame.Rect(
+        water_2_x,
+        water_2_y,
+        water_width,
+        water_height
+    )
+
+    # collect bottle 1
+    if not water_1_collected and lav_rect.colliderect(water_1_rect):
+        water_1_collected = True
+        water_count += 1
+
+    # collect bottle 2
+    if not water_2_collected and lav_rect.colliderect(water_2_rect):
+        water_2_collected = True
         water_count += 1
 
 
     # ---------------- SCREEN POSITIONS ----------------
 
-    # convert world positions into screen positions
+    # convert world positions to screen positions
     lav_screen_x = lav_x - camera_x
-    water_screen_x = water_x - camera_x
+
+    water_1_screen_x = water_1_x - camera_x
+    water_2_screen_x = water_2_x - camera_x
 
 
     # ---------------- DRAW EVERYTHING ----------------
@@ -267,11 +288,18 @@ while running:
 
     # ---------------- DRAW WATER ----------------
 
-    if not water_collected:
-
+    # bottle 1
+    if not water_1_collected:
         screen.blit(
             water_image,
-            (water_screen_x, water_y)
+            (water_1_screen_x, water_1_y)
+        )
+
+    # bottle 2
+    if not water_2_collected:
+        screen.blit(
+            water_image,
+            (water_2_screen_x, water_2_y)
         )
 
 
