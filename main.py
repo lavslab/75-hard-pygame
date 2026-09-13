@@ -75,6 +75,16 @@ jump_frames = [
     for frame in jump_frames
 ]
 
+# load water bottle
+water_image = pygame.image.load(
+    "assets/water_bottle.png"
+).convert_alpha()
+
+water_image = pygame.transform.scale(
+    water_image,
+    (45, 70)
+)
+
 # clock
 clock = pygame.time.Clock()
 
@@ -82,6 +92,10 @@ clock = pygame.time.Clock()
 lav_x = 100
 lav_y = 350
 lav_speed = 5
+
+# water bottle position
+water_x = 650
+water_y = 380
 
 # jumping settings
 lav_y_velocity = 0
@@ -189,6 +203,11 @@ while running:
     else:
         # Lav is standing still
         screen.blit(lav_image, (lav_x, lav_y))
+
+        # draw water bottle
+        screen.blit(water_image, (water_x, water_y))
+
+        
 
     # show finished frame
     pygame.display.update()
