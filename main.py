@@ -85,6 +85,9 @@ water_image = pygame.transform.scale(
     (45, 70)
 )
 
+# font for game text
+font = pygame.font.Font(None, 36)
+
 # clock
 clock = pygame.time.Clock()
 
@@ -111,6 +114,10 @@ water_y = 380
 
 # collectible state
 water_collected = False
+
+# water counter
+water_count = 0
+water_goal = 5
 
 # ------ main game loop ------
 running = True
@@ -168,7 +175,7 @@ while running:
 
     # ---------------- COLLISION ----------------
 
-    # make invisible rectangles around Lav and the bottle
+    # invisible rectangle around Lav
     lav_rect = pygame.Rect(
         lav_x,
         lav_y,
@@ -176,6 +183,7 @@ while running:
         lav_height
     )
 
+    # invisible rectangle around water bottle
     water_rect = pygame.Rect(
         water_x,
         water_y,
@@ -183,9 +191,10 @@ while running:
         70
     )
 
-    # collect water bottle when Lav touches it
+    # collect water bottle
     if not water_collected and lav_rect.colliderect(water_rect):
         water_collected = True
+        water_count += 1
 
     # ---------------- DRAW EVERYTHING ----------------
 
@@ -199,7 +208,7 @@ while running:
         (0, 450, WIDTH, 50)
     )
 
-    # draw water bottle only if it has NOT been collected
+    # draw water bottle only if not collected
     if not water_collected:
         screen.blit(
             water_image,
@@ -208,17 +217,17 @@ while running:
 
     # draw Lav
     if lav_y < 350:
-        # Lav is jumping
+        # jumping
         current_frame = jump_frames[int(jump_animation_index)]
         screen.blit(current_frame, (lav_x, lav_y))
 
     elif keys[pygame.K_RIGHT]:
-        # Lav is running right
+        # running right
         current_frame = run_frames[int(run_animation_index)]
         screen.blit(current_frame, (lav_x, lav_y))
 
     elif keys[pygame.K_LEFT]:
-        # Lav is running left
+        # running left
         current_frame = run_frames[int(run_animation_index)]
 
         current_frame = pygame.transform.flip(
@@ -230,8 +239,20 @@ while running:
         screen.blit(current_frame, (lav_x, lav_y))
 
     else:
-        # Lav is standing still
+        # standing still
         screen.blit(lav_image, (lav_x, lav_y))
+
+    # water counter text
+    water_text = font.render(
+        f"Water: {water_count}/{water_goal}",
+        True,
+        DARK_PINK
+    )
+
+    screen.blit(
+        water_text,
+        (20, 20)
+    )
 
     # show finished frame
     pygame.display.update()
