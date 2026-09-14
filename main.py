@@ -7,23 +7,30 @@ pygame.init()
 
 WIDTH = 900
 HEIGHT = 500
-
-# whole level is wider than the screen
 WORLD_WIDTH = 3000
 
 # colors
-PINK = (255, 220, 235)
 DARK_PINK = (210, 80, 140)
+WHITE = (255, 255, 255)
 
 # create game window
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("75 Hard: Lav Edition")
 
-# clock
 clock = pygame.time.Clock()
-
-# font
 font = pygame.font.Font(None, 36)
+
+
+# ---------------- BACKGROUND ----------------
+
+background_image = pygame.image.load(
+    "assets/background.png"
+).convert()
+
+background_image = pygame.transform.scale(
+    background_image,
+    (WIDTH, HEIGHT)
+)
 
 
 # ---------------- PLAYER IMAGES ----------------
@@ -88,8 +95,8 @@ jump_frames = [
 
 # ---------------- WATER IMAGE ----------------
 
-water_width = 45
-water_height = 70
+water_width = 40
+water_height = 65
 
 water_image = pygame.image.load(
     "assets/water_bottle.png"
@@ -101,9 +108,23 @@ water_image = pygame.transform.scale(
 )
 
 
+# ---------------- JUNK FOOD IMAGE ----------------
+
+junk_width = 90
+junk_height = 60
+
+junk_image = pygame.image.load(
+    "assets/junk_food.png"
+).convert_alpha()
+
+junk_image = pygame.transform.scale(
+    junk_image,
+    (junk_width, junk_height)
+)
+
+
 # ---------------- PLAYER SETTINGS ----------------
 
-# Lav's position inside the world
 lav_x = 100
 lav_y = 350
 
@@ -128,17 +149,28 @@ jump_animation_speed = 0.12
 
 # bottle 1
 water_1_x = 650
-water_1_y = 380
+water_1_y = 385
 water_1_collected = False
 
-# bottle 2 - farther into the world
+# bottle 2
 water_2_x = 1200
-water_2_y = 380
+water_2_y = 385
 water_2_collected = False
 
-# water counter
 water_count = 0
 water_goal = 5
+
+
+# ---------------- JUNK FOOD OBSTACLE ----------------
+
+junk_x = 900
+junk_y = 390
+
+# has Lav hit the junk food?
+junk_hit = False
+
+# how long the message stays on screen
+junk_message_timer = 0
 
 
 # ---------------- CAMERA ----------------
@@ -152,22 +184,24 @@ running = True
 
 while running:
 
-    # close game
+    # ---------------- EVENTS ----------------
+
     for event in pygame.event.get():
+
         if event.type == pygame.QUIT:
             running = False
 
-    # keyboard input
+
+    # ---------------- KEYBOARD ----------------
+
     keys = pygame.key.get_pressed()
 
 
     # ---------------- MOVEMENT ----------------
 
-    # move left through world
     if keys[pygame.K_LEFT] and lav_x > 0:
         lav_x -= lav_speed
 
-    # move right through world
     if keys[pygame.K_RIGHT] and lav_x < WORLD_WIDTH - lav_width:
         lav_x += lav_speed
 
@@ -215,21 +249,19 @@ while running:
 
     # ---------------- CAMERA ----------------
 
-    # camera follows Lav
     camera_x = lav_x - WIDTH // 2
 
-    # don't go before beginning of world
+    # don't scroll before beginning of world
     if camera_x < 0:
         camera_x = 0
 
-    # don't go past end of world
+    # don't scroll past end of world
     if camera_x > WORLD_WIDTH - WIDTH:
         camera_x = WORLD_WIDTH - WIDTH
 
 
-    # ---------------- COLLISION ----------------
+    # ---------------- COLLISION RECTS ----------------
 
-    # Lav's collision box
     lav_rect = pygame.Rect(
         lav_x,
         lav_y,
@@ -237,7 +269,6 @@ while running:
         lav_height
     )
 
-    # bottle 1 collision box
     water_1_rect = pygame.Rect(
         water_1_x,
         water_1_y,
@@ -245,7 +276,6 @@ while running:
         water_height
     )
 
-    # bottle 2 collision box
     water_2_rect = pygame.Rect(
         water_2_x,
         water_2_y,
@@ -253,53 +283,85 @@ while running:
         water_height
     )
 
-    # collect bottle 1
+    junk_rect = pygame.Rect(
+        junk_x,
+        junk_y,
+        junk_width,
+        junk_height
+    )
+
+
+    # ---------------- WATER COLLISION ----------------
+
     if not water_1_collected and lav_rect.colliderect(water_1_rect):
         water_1_collected = True
         water_count += 1
 
-    # collect bottle 2
     if not water_2_collected and lav_rect.colliderect(water_2_rect):
         water_2_collected = True
         water_count += 1
 
 
+    # ---------------- JUNK FOOD COLLISION ----------------
+
+    if not junk_hit and lav_rect.colliderect(junk_rect):
+
+        junk_hit = True
+
+        # show message for about 2 seconds
+        junk_message_timer = 120
+
+        print("Oops! Junk food 😭")
+
+
     # ---------------- SCREEN POSITIONS ----------------
 
-    # convert world positions to screen positions
     lav_screen_x = lav_x - camera_x
 
     water_1_screen_x = water_1_x - camera_x
     water_2_screen_x = water_2_x - camera_x
 
+    junk_screen_x = junk_x - camera_x
 
-    # ---------------- DRAW EVERYTHING ----------------
 
-    # background
-    screen.fill(PINK)
+    # ---------------- DRAW BACKGROUND ----------------
 
-    # ground
-    pygame.draw.rect(
-        screen,
-        DARK_PINK,
-        (0, 450, WIDTH, 50)
+    # repeat background so scrolling continues
+    background_offset = camera_x % WIDTH
+
+    screen.blit(
+        background_image,
+        (-background_offset, 0)
+    )
+
+    screen.blit(
+        background_image,
+        (WIDTH - background_offset, 0)
     )
 
 
     # ---------------- DRAW WATER ----------------
 
-    # bottle 1
     if not water_1_collected:
         screen.blit(
             water_image,
             (water_1_screen_x, water_1_y)
         )
 
-    # bottle 2
     if not water_2_collected:
         screen.blit(
             water_image,
             (water_2_screen_x, water_2_y)
+        )
+
+
+    # ---------------- DRAW JUNK FOOD ----------------
+
+    # only draw junk food if it has NOT been hit
+    if not junk_hit:
+        screen.blit(
+            junk_image,
+            (junk_screen_x, junk_y)
         )
 
 
@@ -364,10 +426,27 @@ while running:
     )
 
 
-    # show finished frame
-    pygame.display.update()
+    # ---------------- JUNK FOOD MESSAGE ----------------
 
-    # 60 FPS
+    if junk_message_timer > 0:
+
+        junk_text = font.render(
+            "Oops! Junk food!",
+            True,
+            WHITE
+        )
+
+        screen.blit(
+            junk_text,
+            (WIDTH // 2 - 100, 70)
+        )
+
+        junk_message_timer -= 1
+
+
+    # ---------------- UPDATE SCREEN ----------------
+
+    pygame.display.update()
     clock.tick(60)
 
 
