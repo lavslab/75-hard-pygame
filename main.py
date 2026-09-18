@@ -161,15 +161,16 @@ jump_animation_speed = 0.12
 
 # ---------------- WATER BOTTLES ----------------
 
-# bottle 1
-water_1_x = 650
-water_1_y = 385
-water_1_collected = False
+# Instead of coding each bottle separately,
+# all 5 bottles now live inside one list.
 
-# bottle 2
-water_2_x = 1200
-water_2_y = 385
-water_2_collected = False
+water_bottles = [
+    {"x": 650, "y": 385, "collected": False},
+    {"x": 1200, "y": 385, "collected": False},
+    {"x": 1600, "y": 385, "collected": False},
+    {"x": 2050, "y": 385, "collected": False},
+    {"x": 2550, "y": 385, "collected": False},
+]
 
 water_count = 0
 water_goal = 5
@@ -293,22 +294,6 @@ while running:
         75
     )
 
-    # bottle 1
-    water_1_rect = pygame.Rect(
-        water_1_x,
-        water_1_y,
-        water_width,
-        water_height
-    )
-
-    # bottle 2
-    water_2_rect = pygame.Rect(
-        water_2_x,
-        water_2_y,
-        water_width,
-        water_height
-    )
-
     # smaller junk-food hitbox
     junk_rect = pygame.Rect(
         junk_x + 20,
@@ -320,40 +305,34 @@ while running:
 
     # ---------------- WATER COLLISION ----------------
 
-    # bottle 1
-    if (
-        not water_1_collected
-        and lav_rect.colliderect(water_1_rect)
-    ):
+    # Check every bottle in the list.
+    for bottle in water_bottles:
 
-        water_1_collected = True
-        water_count += 1
+        bottle_rect = pygame.Rect(
+            bottle["x"],
+            bottle["y"],
+            water_width,
+            water_height
+        )
 
-        # floating +1 WATER
-        water_popup_timer = 60
-        water_popup_y = lav_y - 10
+        if (
+            not bottle["collected"]
+            and lav_rect.colliderect(bottle_rect)
+        ):
 
-        # play ding
-        if water_ding:
-            water_ding.play()
+            # mark this bottle as collected
+            bottle["collected"] = True
 
+            # update counter
+            water_count += 1
 
-    # bottle 2
-    if (
-        not water_2_collected
-        and lav_rect.colliderect(water_2_rect)
-    ):
+            # floating +1 WATER!
+            water_popup_timer = 60
+            water_popup_y = lav_y - 10
 
-        water_2_collected = True
-        water_count += 1
-
-        # floating +1 WATER
-        water_popup_timer = 60
-        water_popup_y = lav_y - 10
-
-        # play ding
-        if water_ding:
-            water_ding.play()
+            # play ding
+            if water_ding:
+                water_ding.play()
 
 
     # ---------------- JUNK FOOD COLLISION ----------------
@@ -391,9 +370,6 @@ while running:
 
     lav_screen_x = lav_x - camera_x
 
-    water_1_screen_x = water_1_x - camera_x
-    water_2_screen_x = water_2_x - camera_x
-
     junk_screen_x = junk_x - camera_x
 
 
@@ -414,20 +390,17 @@ while running:
 
     # ---------------- DRAW WATER ----------------
 
-    if not water_1_collected:
+    # Draw every bottle that has not been collected.
+    for bottle in water_bottles:
 
-        screen.blit(
-            water_image,
-            (water_1_screen_x, water_1_y)
-        )
+        if not bottle["collected"]:
 
+            bottle_screen_x = bottle["x"] - camera_x
 
-    if not water_2_collected:
-
-        screen.blit(
-            water_image,
-            (water_2_screen_x, water_2_y)
-        )
+            screen.blit(
+                water_image,
+                (bottle_screen_x, bottle["y"])
+            )
 
 
     # ---------------- DRAW JUNK FOOD ----------------
