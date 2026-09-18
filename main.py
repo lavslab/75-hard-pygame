@@ -17,6 +17,7 @@ pygame.display.set_caption("75 Hard: Lav Edition")
 
 clock = pygame.time.Clock()
 font = pygame.font.Font(None, 36)
+small_font = pygame.font.Font(None, 30)
 
 
 # ---------------- BACKGROUND ----------------
@@ -36,7 +37,6 @@ background_image = pygame.transform.scale(
 lav_width = 70
 lav_height = 100
 
-# front-facing idle image
 lav_image = pygame.image.load(
     "assets/lav_idle.png"
 ).convert_alpha()
@@ -137,6 +137,33 @@ except (pygame.error, FileNotFoundError):
     print("junk_food_hit.wav not found - continuing without sound")
 
 
+# ---------------- BOOK IMAGE ----------------
+
+book_width = 75
+book_height = 65
+
+book_image = pygame.image.load(
+    "assets/book.png"
+).convert_alpha()
+
+book_image = pygame.transform.scale(
+    book_image,
+    (book_width, book_height)
+)
+
+
+# ---------------- BOOK SOUND ----------------
+
+try:
+    book_read_sound = pygame.mixer.Sound(
+        "assets/book_read.wav"
+    )
+
+except (pygame.error, FileNotFoundError):
+    book_read_sound = None
+    print("book_read.wav not found - continuing without sound")
+
+
 # ---------------- PLAYER SETTINGS ----------------
 
 lav_x = 100
@@ -145,8 +172,6 @@ lav_speed = 5
 
 lav_y_velocity = 0
 gravity = 1
-
-# slightly stronger jump
 jump_strength = -16
 
 
@@ -161,9 +186,6 @@ jump_animation_speed = 0.12
 
 # ---------------- WATER BOTTLES ----------------
 
-# Instead of coding each bottle separately,
-# all 5 bottles now live inside one list.
-
 water_bottles = [
     {"x": 650, "y": 385, "collected": False},
     {"x": 1200, "y": 385, "collected": False},
@@ -176,23 +198,37 @@ water_count = 0
 water_goal = 5
 
 
-# ---------------- WATER PICKUP POPUP ----------------
+# ---------------- WATER POPUP ----------------
 
 water_popup_timer = 0
 water_popup_y = 0
 
 
-# ---------------- JUNK FOOD OBSTACLE ----------------
+# ---------------- JUNK FOOD ----------------
 
 junk_x = 900
 junk_y = 390
 
-# floating red warning
 junk_message_timer = 0
 junk_popup_y = 0
 
-# prevents collision from triggering every frame
 junk_collision_cooldown = 0
+
+
+# ---------------- BOOK / READING CHALLENGE ----------------
+
+# Book appears between water bottle 3 and 4
+book_x = 1825
+book_y = 385
+
+book_read = False
+
+# how close Lav needs to be before R prompt appears
+book_interaction_distance = 100
+
+# floating completion message
+book_popup_timer = 0
+book_popup_y = 0
 
 
 # ---------------- CAMERA ----------------
@@ -212,6 +248,35 @@ while running:
 
         if event.type == pygame.QUIT:
             running = False
+
+
+        # ---------------- READ BOOK ----------------
+
+        if event.type == pygame.KEYDOWN:
+
+            if event.key == pygame.K_r and not book_read:
+
+                lav_center = lav_x + lav_width // 2
+                book_center = book_x + book_width // 2
+
+                distance_to_book = abs(
+                    lav_center - book_center
+                )
+
+                if distance_to_book <= book_interaction_distance:
+
+                    # complete reading challenge
+                    book_read = True
+
+                    # start floating completion message
+                    book_popup_timer = 90
+                    book_popup_y = lav_y - 10
+
+                    # page-turn sound
+                    if book_read_sound:
+                        book_read_sound.play()
+
+                    print("10 pages complete!")
 
 
     # ---------------- KEYBOARD ----------------
@@ -255,7 +320,6 @@ while running:
     lav_y_velocity += gravity
     lav_y += lav_y_velocity
 
-    # keep Lav on ground
     if lav_y >= 350:
         lav_y = 350
         lav_y_velocity = 0
@@ -286,7 +350,6 @@ while running:
 
     # ---------------- COLLISION RECTS ----------------
 
-    # smaller Lav hitbox
     lav_rect = pygame.Rect(
         lav_x + 15,
         lav_y + 20,
@@ -294,7 +357,6 @@ while running:
         75
     )
 
-    # smaller junk-food hitbox
     junk_rect = pygame.Rect(
         junk_x + 20,
         junk_y + 25,
@@ -305,7 +367,6 @@ while running:
 
     # ---------------- WATER COLLISION ----------------
 
-    # Check every bottle in the list.
     for bottle in water_bottles:
 
         bottle_rect = pygame.Rect(
@@ -320,17 +381,12 @@ while running:
             and lav_rect.colliderect(bottle_rect)
         ):
 
-            # mark this bottle as collected
             bottle["collected"] = True
-
-            # update counter
             water_count += 1
 
-            # floating +1 WATER!
             water_popup_timer = 60
             water_popup_y = lav_y - 10
 
-            # play ding
             if water_ding:
                 water_ding.play()
 
@@ -346,31 +402,40 @@ while running:
         and junk_collision_cooldown == 0
     ):
 
-        # floating red warning
         junk_message_timer = 60
         junk_popup_y = lav_y - 10
 
-        # play error sound
         if junk_food_sound:
             junk_food_sound.play()
 
-        # bump Lav backwards
         lav_x -= 80
-
-        # don't let her leave the world
         lav_x = max(0, lav_x)
 
-        # prevent repeated instant collisions
         junk_collision_cooldown = 30
 
         print("Oops! Junk food!")
 
 
+    # ---------------- BOOK DISTANCE ----------------
+
+    lav_center = lav_x + lav_width // 2
+    book_center = book_x + book_width // 2
+
+    distance_to_book = abs(
+        lav_center - book_center
+    )
+
+    near_book = (
+        distance_to_book <= book_interaction_distance
+        and not book_read
+    )
+
+
     # ---------------- SCREEN POSITIONS ----------------
 
     lav_screen_x = lav_x - camera_x
-
     junk_screen_x = junk_x - camera_x
+    book_screen_x = book_x - camera_x
 
 
     # ---------------- DRAW BACKGROUND ----------------
@@ -390,7 +455,6 @@ while running:
 
     # ---------------- DRAW WATER ----------------
 
-    # Draw every bottle that has not been collected.
     for bottle in water_bottles:
 
         if not bottle["collected"]:
@@ -411,11 +475,21 @@ while running:
     )
 
 
+    # ---------------- DRAW BOOK ----------------
+
+    # Book disappears once R is pressed successfully
+    if not book_read:
+
+        screen.blit(
+            book_image,
+            (book_screen_x, book_y)
+        )
+
+
     # ---------------- DRAW LAV ----------------
 
     if lav_y < 350:
 
-        # jumping
         current_frame = jump_frames[
             int(jump_animation_index)
         ]
@@ -428,7 +502,6 @@ while running:
 
     elif keys[pygame.K_RIGHT]:
 
-        # running right
         current_frame = run_frames[
             int(run_animation_index)
         ]
@@ -441,12 +514,10 @@ while running:
 
     elif keys[pygame.K_LEFT]:
 
-        # running left
         current_frame = run_frames[
             int(run_animation_index)
         ]
 
-        # flip sprite to face left
         current_frame = pygame.transform.flip(
             current_frame,
             True,
@@ -461,14 +532,35 @@ while running:
 
     else:
 
-        # standing still / facing forward
         screen.blit(
             lav_image,
             (lav_screen_x, lav_y)
         )
 
 
-    # ---------------- WATER PICKUP POPUP ----------------
+    # ---------------- PRESS R PROMPT ----------------
+
+    if near_book:
+
+        read_prompt = small_font.render(
+            "Press R to Read",
+            True,
+            WHITE
+        )
+
+        prompt_x = (
+            book_screen_x
+            + book_width // 2
+            - read_prompt.get_width() // 2
+        )
+
+        screen.blit(
+            read_prompt,
+            (prompt_x, book_y - 35)
+        )
+
+
+    # ---------------- WATER POPUP ----------------
 
     if water_popup_timer > 0:
 
@@ -489,9 +581,7 @@ while running:
             (popup_x, water_popup_y)
         )
 
-        # float upward
         water_popup_y -= 0.5
-
         water_popup_timer -= 1
 
 
@@ -516,13 +606,37 @@ while running:
             (junk_popup_x, junk_popup_y)
         )
 
-        # float upward
         junk_popup_y -= 0.5
-
         junk_message_timer -= 1
 
 
-    # ---------------- WATER COUNTER ----------------
+    # ---------------- BOOK COMPLETION POPUP ----------------
+
+    if book_popup_timer > 0:
+
+        book_text = font.render(
+            "10 PAGES COMPLETE!",
+            True,
+            WHITE
+        )
+
+        book_popup_x = (
+            lav_screen_x
+            + lav_width // 2
+            - book_text.get_width() // 2
+        )
+
+        screen.blit(
+            book_text,
+            (book_popup_x, book_popup_y)
+        )
+
+        # float upward
+        book_popup_y -= 0.5
+        book_popup_timer -= 1
+
+
+    # ---------------- HUD ----------------
 
     water_text = font.render(
         f"Water: {water_count}/{water_goal}",
@@ -536,10 +650,31 @@ while running:
     )
 
 
+    # Reading status
+    if book_read:
+        read_status = "Read: DONE"
+        read_color = WHITE
+
+    else:
+        read_status = "Read: --"
+        read_color = DARK_PINK
+
+
+    read_text = font.render(
+        read_status,
+        True,
+        read_color
+    )
+
+    screen.blit(
+        read_text,
+        (20, 55)
+    )
+
+
     # ---------------- UPDATE SCREEN ----------------
 
     pygame.display.update()
-
     clock.tick(60)
 
 
