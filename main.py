@@ -85,6 +85,28 @@ jump_frames = [
 ]
 
 
+# ---------------- DRINKING FRAMES ----------------
+
+drink_frames = [
+    pygame.image.load(
+        f"assets/lav_sprite_frames/game_ready/drink/drink_{i}.png"
+    ).convert_alpha()
+    for i in range(1, 5)
+]
+
+drink_frames = [
+    pygame.transform.scale(frame, (lav_width, lav_height))
+    for frame in drink_frames
+]
+
+
+# ---------------- WORKOUT FRAMES ----------------
+workout_frames = [
+    pygame.image.load(f"assets/lav_sprite_frames/game_ready/workout/workout_{i}.png").convert_alpha()
+    for i in range(1, 5)
+]
+workout_frames = [pygame.transform.scale(frame, (lav_width, lav_height)) for frame in workout_frames]
+
 # ---------------- WATER IMAGE ----------------
 
 water_width = 40
@@ -166,6 +188,21 @@ except (pygame.error, FileNotFoundError):
     print("book_read.wav not found - continuing without sound")
 
 
+# ---------------- DUMBBELL IMAGE ----------------
+
+dumbbell_width = 85
+dumbbell_height = 55
+
+dumbbell_image = pygame.image.load(
+    "assets/dumbbell.png"
+).convert_alpha()
+
+dumbbell_image = pygame.transform.scale(
+    dumbbell_image,
+    (dumbbell_width, dumbbell_height)
+)
+
+
 # ---------------- PLAYER SETTINGS ----------------
 
 lav_x = 100
@@ -205,6 +242,12 @@ water_goal = 5
 water_popup_timer = 0
 water_popup_y = 0
 
+# Drinking animation state
+drinking_active = False
+drink_animation_index = 0.0
+drink_animation_speed = 0.10
+current_water_bottle = None
+
 
 # ---------------- JUNK FOOD ----------------
 
@@ -233,6 +276,24 @@ book_popup_timer = 0
 book_popup_y = 0
 
 
+# ---------------- WORKOUT CHALLENGE ----------------
+
+dumbbell_x = 2250
+dumbbell_y = 395
+workout_interaction_distance = 110
+
+workout_active = False
+workout_complete = False
+workout_reps = 0
+workout_goal = 10
+
+workout_popup_timer = 0
+workout_popup_y = 0
+workout_rep_animating = False
+workout_animation_index = 0.0
+workout_animation_speed = 0.18
+
+
 # ---------------- CAMERA ----------------
 
 camera_x = 0
@@ -252,11 +313,12 @@ while running:
             running = False
 
 
-        # ---------------- READ BOOK ----------------
+        # ---------------- INTERACTIONS ----------------
 
         if event.type == pygame.KEYDOWN:
 
-            if event.key == pygame.K_r and not book_read:
+            # Read book with R
+            if event.key == pygame.K_r and not book_read and not workout_active and not drinking_active:
 
                 lav_center = lav_x + lav_width // 2
                 book_center = book_x + book_width // 2
@@ -267,18 +329,35 @@ while running:
 
                 if distance_to_book <= book_interaction_distance:
 
-                    # complete reading challenge
                     book_read = True
-
-                    # start floating completion message
                     book_popup_timer = 90
                     book_popup_y = lav_y - 10
 
-                    # page-turn sound
                     if book_read_sound:
                         book_read_sound.play()
 
                     print("10 pages complete!")
+
+            # Start workout with W
+            if event.key == pygame.K_w and not workout_complete and not workout_active and not drinking_active:
+
+                lav_center = lav_x + lav_width // 2
+                dumbbell_center = dumbbell_x + dumbbell_width // 2
+
+                distance_to_dumbbell = abs(
+                    lav_center - dumbbell_center
+                )
+
+                if distance_to_dumbbell <= workout_interaction_distance:
+                    workout_active = True
+                    workout_reps = 0
+                    print("Workout started!")
+
+            # One SPACE press starts one complete animated curl.
+            elif event.key == pygame.K_SPACE and workout_active and not workout_rep_animating:
+                workout_rep_animating = True
+                workout_animation_index = 0.0
+
 
 
     # ---------------- KEYBOARD ----------------
@@ -288,11 +367,13 @@ while running:
 
     # ---------------- MOVEMENT ----------------
 
-    if keys[pygame.K_LEFT] and lav_x > 0:
-        lav_x -= lav_speed
+    if not workout_active and not drinking_active:
 
-    if keys[pygame.K_RIGHT] and lav_x < WORLD_WIDTH - lav_width:
-        lav_x += lav_speed
+        if keys[pygame.K_LEFT] and lav_x > 0:
+            lav_x -= lav_speed
+
+        if keys[pygame.K_RIGHT] and lav_x < WORLD_WIDTH - lav_width:
+            lav_x += lav_speed
 
 
     # ---------------- RUNNING ANIMATION ----------------
@@ -300,6 +381,7 @@ while running:
     if (
         (keys[pygame.K_RIGHT] or keys[pygame.K_LEFT])
         and lav_y == 350
+        and not drinking_active
     ):
 
         run_animation_index += run_animation_speed
@@ -313,7 +395,12 @@ while running:
 
     # ---------------- JUMP ----------------
 
-    if keys[pygame.K_SPACE] and lav_y == 350:
+    if (
+        keys[pygame.K_SPACE]
+        and lav_y == 350
+        and not workout_active
+        and not drinking_active
+    ):
         lav_y_velocity = jump_strength
 
 
@@ -328,16 +415,54 @@ while running:
 
 
     # ---------------- JUMP ANIMATION ----------------
-
-    if lav_y < 350:
-
+    if lav_y < 350 and not workout_active and not drinking_active:
         jump_animation_index += jump_animation_speed
-
         if jump_animation_index >= len(jump_frames):
             jump_animation_index = len(jump_frames) - 1
-
     else:
         jump_animation_index = 0
+
+    # ---------------- WORKOUT ANIMATION ----------------
+    if workout_active and workout_rep_animating:
+        workout_animation_index += workout_animation_speed
+        if workout_animation_index >= len(workout_frames):
+            workout_rep_animating = False
+            workout_animation_index = 0.0
+            workout_reps += 1
+            print(f"Rep {workout_reps}/{workout_goal}")
+            if workout_reps >= workout_goal:
+                workout_reps = workout_goal
+                workout_active = False
+                workout_complete = True
+                workout_popup_timer = 90
+                workout_popup_y = lav_y - 10
+                print("Workout complete!")
+
+    # ---------------- DRINKING ANIMATION ----------------
+
+    if drinking_active:
+
+        drink_animation_index += drink_animation_speed
+
+        # Once all 4 drinking frames finish, collect the bottle.
+        if drink_animation_index >= len(drink_frames):
+
+            drinking_active = False
+            drink_animation_index = 0.0
+
+            if current_water_bottle is not None:
+                current_water_bottle["collected"] = True
+                water_count += 1
+
+                water_popup_timer = 60
+                water_popup_y = lav_y - 10
+
+                if water_ding:
+                    water_ding.play()
+
+                print(f"Water {water_count}/{water_goal}")
+
+                current_water_bottle = None
 
 
     # ---------------- CAMERA ----------------
@@ -369,28 +494,28 @@ while running:
 
     # ---------------- WATER COLLISION ----------------
 
-    for bottle in water_bottles:
+    # Touching a bottle starts the drinking animation.
+    # The bottle is only counted/disappears AFTER the animation finishes.
+    if not drinking_active and not workout_active:
 
-        bottle_rect = pygame.Rect(
-            bottle["x"],
-            bottle["y"],
-            water_width,
-            water_height
-        )
+        for bottle in water_bottles:
 
-        if (
-            not bottle["collected"]
-            and lav_rect.colliderect(bottle_rect)
-        ):
+            bottle_rect = pygame.Rect(
+                bottle["x"],
+                bottle["y"],
+                water_width,
+                water_height
+            )
 
-            bottle["collected"] = True
-            water_count += 1
-
-            water_popup_timer = 60
-            water_popup_y = lav_y - 10
-
-            if water_ding:
-                water_ding.play()
+            if (
+                not bottle["collected"]
+                and lav_rect.colliderect(bottle_rect)
+            ):
+                drinking_active = True
+                drink_animation_index = 0.0
+                current_water_bottle = bottle
+                lav_y_velocity = 0
+                break
 
 
     # ---------------- JUNK FOOD COLLISION ----------------
@@ -402,6 +527,7 @@ while running:
     if (
         lav_rect.colliderect(junk_rect)
         and junk_collision_cooldown == 0
+        and not drinking_active
     ):
 
         junk_message_timer = 60
@@ -430,6 +556,23 @@ while running:
     near_book = (
         distance_to_book <= book_interaction_distance
         and not book_read
+        and not drinking_active
+    )
+
+
+    # ---------------- WORKOUT DISTANCE ----------------
+
+    dumbbell_center = dumbbell_x + dumbbell_width // 2
+
+    distance_to_dumbbell = abs(
+        lav_center - dumbbell_center
+    )
+
+    near_dumbbell = (
+        distance_to_dumbbell <= workout_interaction_distance
+        and not workout_complete
+        and not workout_active
+        and not drinking_active
     )
 
 
@@ -438,6 +581,7 @@ while running:
     lav_screen_x = lav_x - camera_x
     junk_screen_x = junk_x - camera_x
     book_screen_x = book_x - camera_x
+    dumbbell_screen_x = dumbbell_x - camera_x
 
 
     # ---------------- DRAW BACKGROUND ----------------
@@ -488,57 +632,49 @@ while running:
         )
 
 
+    # ---------------- DRAW DUMBBELL ----------------
+
+    if not workout_complete:
+
+        screen.blit(
+            dumbbell_image,
+            (dumbbell_screen_x, dumbbell_y)
+        )
+
+
     # ---------------- DRAW LAV ----------------
+    if drinking_active:
 
-    if lav_y < 350:
+        frame_number = min(
+            int(drink_animation_index),
+            len(drink_frames) - 1
+        )
 
-        current_frame = jump_frames[
-            int(jump_animation_index)
-        ]
+        current_frame = drink_frames[frame_number]
 
         screen.blit(
             current_frame,
             (lav_screen_x, lav_y)
         )
 
-
+    elif workout_active:
+        if workout_rep_animating:
+            frame_number = min(int(workout_animation_index), len(workout_frames) - 1)
+            current_frame = workout_frames[frame_number]
+        else:
+            current_frame = workout_frames[0]
+        screen.blit(current_frame, (lav_screen_x, lav_y))
+    elif lav_y < 350:
+        current_frame = jump_frames[int(jump_animation_index)]
+        screen.blit(current_frame, (lav_screen_x, lav_y))
     elif keys[pygame.K_RIGHT]:
-
-        current_frame = run_frames[
-            int(run_animation_index)
-        ]
-
-        screen.blit(
-            current_frame,
-            (lav_screen_x, lav_y)
-        )
-
-
+        current_frame = run_frames[int(run_animation_index)]
+        screen.blit(current_frame, (lav_screen_x, lav_y))
     elif keys[pygame.K_LEFT]:
-
-        current_frame = run_frames[
-            int(run_animation_index)
-        ]
-
-        current_frame = pygame.transform.flip(
-            current_frame,
-            True,
-            False
-        )
-
-        screen.blit(
-            current_frame,
-            (lav_screen_x, lav_y)
-        )
-
-
+        current_frame = pygame.transform.flip(run_frames[int(run_animation_index)], True, False)
+        screen.blit(current_frame, (lav_screen_x, lav_y))
     else:
-
-        screen.blit(
-            lav_image,
-            (lav_screen_x, lav_y)
-        )
-
+        screen.blit(lav_image, (lav_screen_x, lav_y))
 
     # ---------------- PRESS R PROMPT ----------------
 
@@ -560,6 +696,94 @@ while running:
             read_prompt,
             (prompt_x, book_y - 35)
         )
+
+
+    # ---------------- PRESS W PROMPT ----------------
+
+    if near_dumbbell:
+
+        workout_prompt = small_font.render(
+            "Press W to Workout",
+            True,
+            WHITE
+        )
+
+        workout_prompt_x = (
+            dumbbell_screen_x
+            + dumbbell_width // 2
+            - workout_prompt.get_width() // 2
+        )
+
+        screen.blit(
+            workout_prompt,
+            (workout_prompt_x, dumbbell_y - 35)
+        )
+
+
+    # ---------------- WORKOUT MODE ----------------
+
+    if workout_active:
+
+        workout_title = font.render(
+            "WORKOUT",
+            True,
+            WHITE
+        )
+
+        rep_text = font.render(
+            f"{workout_reps}/{workout_goal} REPS",
+            True,
+            WHITE
+        )
+
+        rep_prompt_text = "CURL..." if workout_rep_animating else "SPACE = 1 REP"
+        rep_prompt = small_font.render(
+            rep_prompt_text,
+            True,
+            WHITE
+        )
+
+        center_x = WIDTH // 2
+
+        screen.blit(
+            workout_title,
+            (center_x - workout_title.get_width() // 2, 65)
+        )
+
+        screen.blit(
+            rep_text,
+            (center_x - rep_text.get_width() // 2, 100)
+        )
+
+        screen.blit(
+            rep_prompt,
+            (center_x - rep_prompt.get_width() // 2, 135)
+        )
+
+
+    # ---------------- WORKOUT COMPLETION POPUP ----------------
+
+    if workout_popup_timer > 0:
+
+        workout_text = font.render(
+            "WORKOUT COMPLETE!",
+            True,
+            WHITE
+        )
+
+        workout_popup_x = (
+            lav_screen_x
+            + lav_width // 2
+            - workout_text.get_width() // 2
+        )
+
+        screen.blit(
+            workout_text,
+            (workout_popup_x, workout_popup_y)
+        )
+
+        workout_popup_y -= 0.5
+        workout_popup_timer -= 1
 
 
     # ---------------- WATER POPUP ----------------
@@ -666,10 +890,17 @@ while running:
     else:
         read_status = "--"
 
+    if workout_complete:
+        workout_status = "DONE"
+    elif workout_active:
+        workout_status = f"{workout_reps}/{workout_goal}"
+    else:
+        workout_status = "--"
+
     tasks = [
         ("WATER", water_status),
         ("READ", read_status),
-        ("WORKOUT", "--"),
+        ("WORKOUT", workout_status),
         ("OUTDOOR", "--"),
         ("DIET", "--"),
         ("PHOTO", "--"),
