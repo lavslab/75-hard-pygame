@@ -18,6 +18,8 @@ pygame.display.set_caption("75 Hard: Lav Edition")
 clock = pygame.time.Clock()
 font = pygame.font.Font(None, 36)
 small_font = pygame.font.Font(None, 30)
+hud_title_font = pygame.font.Font(None, 30)
+hud_font = pygame.font.Font(None, 25)
 
 
 # ---------------- BACKGROUND ----------------
@@ -636,40 +638,67 @@ while running:
         book_popup_timer -= 1
 
 
-    # ---------------- HUD ----------------
+    # ---------------- 75 HARD HUD ----------------
 
-    water_text = font.render(
-        f"Water: {water_count}/{water_goal}",
+    hud_x = 15
+    hud_y = 15
+    hud_width = 210
+    hud_height = 205
+
+    hud_surface = pygame.Surface(
+        (hud_width, hud_height),
+        pygame.SRCALPHA
+    )
+    hud_surface.fill((255, 220, 235, 210))
+    screen.blit(hud_surface, (hud_x, hud_y))
+
+    hud_title = hud_title_font.render(
+        "75 HARD - DAY 1",
         True,
         DARK_PINK
     )
+    screen.blit(hud_title, (hud_x + 15, hud_y + 12))
 
-    screen.blit(
-        water_text,
-        (20, 20)
-    )
+    water_status = f"{water_count}/{water_goal}"
 
-
-    # Reading status
     if book_read:
-        read_status = "Read: DONE"
-        read_color = WHITE
-
+        read_status = "DONE"
     else:
-        read_status = "Read: --"
-        read_color = DARK_PINK
+        read_status = "--"
 
+    tasks = [
+        ("WATER", water_status),
+        ("READ", read_status),
+        ("WORKOUT", "--"),
+        ("OUTDOOR", "--"),
+        ("DIET", "--"),
+        ("PHOTO", "--"),
+    ]
 
-    read_text = font.render(
-        read_status,
-        True,
-        read_color
-    )
+    task_y = hud_y + 50
 
-    screen.blit(
-        read_text,
-        (20, 55)
-    )
+    for task_name, task_status in tasks:
+        task_text = hud_font.render(
+            task_name,
+            True,
+            DARK_PINK
+        )
+        screen.blit(task_text, (hud_x + 15, task_y))
+
+        status_text = hud_font.render(
+            task_status,
+            True,
+            WHITE
+        )
+        screen.blit(
+            status_text,
+            (
+                hud_x + hud_width - status_text.get_width() - 15,
+                task_y
+            )
+        )
+
+        task_y += 24
 
 
     # ---------------- UPDATE SCREEN ----------------
