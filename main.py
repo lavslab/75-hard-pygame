@@ -85,6 +85,21 @@ jump_frames = [
 ]
 
 
+# ---------------- READING FRAMES ----------------
+
+read_frames = [
+    pygame.image.load(
+        f"assets/lav_sprite_frames/game_ready/read/read_{i}.png"
+    ).convert_alpha()
+    for i in range(1, 5)
+]
+
+read_frames = [
+    pygame.transform.scale(frame, (lav_width, lav_height))
+    for frame in read_frames
+]
+
+
 # ---------------- DRINKING FRAMES ----------------
 
 drink_frames = [
@@ -275,6 +290,12 @@ book_interaction_distance = 100
 book_popup_timer = 0
 book_popup_y = 0
 
+# Reading animation state
+reading_active = False
+read_animation_index = 0.0
+read_animation_speed = 0.035
+
+
 
 # ---------------- WORKOUT CHALLENGE ----------------
 
@@ -318,7 +339,7 @@ while running:
         if event.type == pygame.KEYDOWN:
 
             # Read book with R
-            if event.key == pygame.K_r and not book_read and not workout_active and not drinking_active:
+            if event.key == pygame.K_r and not book_read and not reading_active and not workout_active and not drinking_active:
 
                 lav_center = lav_x + lav_width // 2
                 book_center = book_x + book_width // 2
@@ -329,17 +350,17 @@ while running:
 
                 if distance_to_book <= book_interaction_distance:
 
-                    book_read = True
-                    book_popup_timer = 90
-                    book_popup_y = lav_y - 10
+                    reading_active = True
+                    read_animation_index = 0.0
+                    lav_y_velocity = 0
 
                     if book_read_sound:
                         book_read_sound.play()
 
-                    print("10 pages complete!")
+                    print("Reading started!")
 
             # Start workout with W
-            if event.key == pygame.K_w and not workout_complete and not workout_active and not drinking_active:
+            if event.key == pygame.K_w and not workout_complete and not workout_active and not drinking_active and not reading_active:
 
                 lav_center = lav_x + lav_width // 2
                 dumbbell_center = dumbbell_x + dumbbell_width // 2
@@ -367,7 +388,7 @@ while running:
 
     # ---------------- MOVEMENT ----------------
 
-    if not workout_active and not drinking_active:
+    if not workout_active and not drinking_active and not reading_active:
 
         if keys[pygame.K_LEFT] and lav_x > 0:
             lav_x -= lav_speed
@@ -382,6 +403,7 @@ while running:
         (keys[pygame.K_RIGHT] or keys[pygame.K_LEFT])
         and lav_y == 350
         and not drinking_active
+        and not reading_active
     ):
 
         run_animation_index += run_animation_speed
@@ -400,6 +422,7 @@ while running:
         and lav_y == 350
         and not workout_active
         and not drinking_active
+        and not reading_active
     ):
         lav_y_velocity = jump_strength
 
@@ -415,7 +438,7 @@ while running:
 
 
     # ---------------- JUMP ANIMATION ----------------
-    if lav_y < 350 and not workout_active and not drinking_active:
+    if lav_y < 350 and not workout_active and not drinking_active and not reading_active:
         jump_animation_index += jump_animation_speed
         if jump_animation_index >= len(jump_frames):
             jump_animation_index = len(jump_frames) - 1
@@ -465,6 +488,24 @@ while running:
                 current_water_bottle = None
 
 
+    # ---------------- READING ANIMATION ----------------
+
+    if reading_active:
+
+        read_animation_index += read_animation_speed
+
+        if read_animation_index >= len(read_frames):
+
+            reading_active = False
+            read_animation_index = 0.0
+            book_read = True
+
+            book_popup_timer = 90
+            book_popup_y = lav_y - 10
+
+            print("10 pages complete!")
+
+
     # ---------------- CAMERA ----------------
 
     camera_x = lav_x - WIDTH // 2
@@ -496,7 +537,7 @@ while running:
 
     # Touching a bottle starts the drinking animation.
     # The bottle is only counted/disappears AFTER the animation finishes.
-    if not drinking_active and not workout_active:
+    if not drinking_active and not workout_active and not reading_active:
 
         for bottle in water_bottles:
 
@@ -528,6 +569,7 @@ while running:
         lav_rect.colliderect(junk_rect)
         and junk_collision_cooldown == 0
         and not drinking_active
+        and not reading_active
     ):
 
         junk_message_timer = 60
@@ -557,6 +599,7 @@ while running:
         distance_to_book <= book_interaction_distance
         and not book_read
         and not drinking_active
+        and not reading_active
     )
 
 
@@ -573,6 +616,7 @@ while running:
         and not workout_complete
         and not workout_active
         and not drinking_active
+        and not reading_active
     )
 
 
@@ -624,7 +668,7 @@ while running:
     # ---------------- DRAW BOOK ----------------
 
     # Book disappears once R is pressed successfully
-    if not book_read:
+    if not book_read and not reading_active:
 
         screen.blit(
             book_image,
@@ -643,7 +687,21 @@ while running:
 
 
     # ---------------- DRAW LAV ----------------
-    if drinking_active:
+    if reading_active:
+
+        frame_number = min(
+            int(read_animation_index),
+            len(read_frames) - 1
+        )
+
+        current_frame = read_frames[frame_number]
+
+        screen.blit(
+            current_frame,
+            (lav_screen_x, lav_y)
+        )
+
+    elif drinking_active:
 
         frame_number = min(
             int(drink_animation_index),
