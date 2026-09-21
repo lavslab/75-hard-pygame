@@ -85,6 +85,21 @@ jump_frames = [
 ]
 
 
+# ---------------- PHOTO FRAMES ----------------
+
+photo_frames = [
+    pygame.image.load(
+        f"assets/lav_sprite_frames/game_ready/photo/photo_{i}.png"
+    ).convert_alpha()
+    for i in range(1, 5)
+]
+
+photo_frames = [
+    pygame.transform.scale(frame, (lav_width, lav_height))
+    for frame in photo_frames
+]
+
+
 # ---------------- READING FRAMES ----------------
 
 read_frames = [
@@ -218,6 +233,21 @@ dumbbell_image = pygame.transform.scale(
 )
 
 
+# ---------------- PHOTO MIRROR ----------------
+
+mirror_width = 115
+mirror_height = 170
+
+mirror_image = pygame.image.load(
+    "assets/photo_mirror.png"
+).convert_alpha()
+
+mirror_image = pygame.transform.scale(
+    mirror_image,
+    (mirror_width, mirror_height)
+)
+
+
 # ---------------- PLAYER SETTINGS ----------------
 
 lav_x = 100
@@ -315,6 +345,22 @@ workout_animation_index = 0.0
 workout_animation_speed = 0.18
 
 
+# ---------------- PROGRESS PHOTO CHALLENGE ----------------
+
+mirror_x = 2740
+mirror_y = 280
+photo_interaction_distance = 120
+
+photo_active = False
+photo_complete = False
+photo_animation_index = 0.0
+photo_animation_speed = 0.035
+
+photo_popup_timer = 0
+photo_popup_y = 0
+photo_flash_timer = 0
+
+
 # ---------------- CAMERA ----------------
 
 camera_x = 0
@@ -339,7 +385,7 @@ while running:
         if event.type == pygame.KEYDOWN:
 
             # Read book with R
-            if event.key == pygame.K_r and not book_read and not reading_active and not workout_active and not drinking_active:
+            if event.key == pygame.K_r and not book_read and not reading_active and not workout_active and not drinking_active and not photo_active:
 
                 lav_center = lav_x + lav_width // 2
                 book_center = book_x + book_width // 2
@@ -359,8 +405,30 @@ while running:
 
                     print("Reading started!")
 
+            # Take progress photo with P
+            if (
+                event.key == pygame.K_p
+                and not photo_complete
+                and not photo_active
+                and not workout_active
+                and not drinking_active
+                and not reading_active
+            ):
+                lav_center = lav_x + lav_width // 2
+                mirror_center = mirror_x + mirror_width // 2
+
+                distance_to_mirror = abs(
+                    lav_center - mirror_center
+                )
+
+                if distance_to_mirror <= photo_interaction_distance:
+                    photo_active = True
+                    photo_animation_index = 0.0
+                    lav_y_velocity = 0
+                    print("Progress photo started!")
+
             # Start workout with W
-            if event.key == pygame.K_w and not workout_complete and not workout_active and not drinking_active and not reading_active:
+            if event.key == pygame.K_w and not workout_complete and not workout_active and not drinking_active and not reading_active and not photo_active:
 
                 lav_center = lav_x + lav_width // 2
                 dumbbell_center = dumbbell_x + dumbbell_width // 2
@@ -388,7 +456,7 @@ while running:
 
     # ---------------- MOVEMENT ----------------
 
-    if not workout_active and not drinking_active and not reading_active:
+    if not workout_active and not drinking_active and not reading_active and not photo_active:
 
         if keys[pygame.K_LEFT] and lav_x > 0:
             lav_x -= lav_speed
@@ -404,6 +472,7 @@ while running:
         and lav_y == 350
         and not drinking_active
         and not reading_active
+        and not photo_active
     ):
 
         run_animation_index += run_animation_speed
@@ -423,6 +492,7 @@ while running:
         and not workout_active
         and not drinking_active
         and not reading_active
+        and not photo_active
     ):
         lav_y_velocity = jump_strength
 
@@ -438,7 +508,7 @@ while running:
 
 
     # ---------------- JUMP ANIMATION ----------------
-    if lav_y < 350 and not workout_active and not drinking_active and not reading_active:
+    if lav_y < 350 and not workout_active and not drinking_active and not reading_active and not photo_active:
         jump_animation_index += jump_animation_speed
         if jump_animation_index >= len(jump_frames):
             jump_animation_index = len(jump_frames) - 1
@@ -506,6 +576,30 @@ while running:
             print("10 pages complete!")
 
 
+    # ---------------- PHOTO ANIMATION ----------------
+
+    if photo_active:
+
+        photo_animation_index += photo_animation_speed
+
+        # Trigger the camera flash during the third pose.
+        if (
+            photo_animation_index >= 2.0
+            and photo_animation_index < 2.0 + photo_animation_speed
+        ):
+            photo_flash_timer = 10
+
+        if photo_animation_index >= len(photo_frames):
+            photo_active = False
+            photo_animation_index = 0.0
+            photo_complete = True
+
+            photo_popup_timer = 90
+            photo_popup_y = lav_y - 10
+
+            print("Progress photo complete!")
+
+
     # ---------------- CAMERA ----------------
 
     camera_x = lav_x - WIDTH // 2
@@ -537,7 +631,7 @@ while running:
 
     # Touching a bottle starts the drinking animation.
     # The bottle is only counted/disappears AFTER the animation finishes.
-    if not drinking_active and not workout_active and not reading_active:
+    if not drinking_active and not workout_active and not reading_active and not photo_active:
 
         for bottle in water_bottles:
 
@@ -570,6 +664,7 @@ while running:
         and junk_collision_cooldown == 0
         and not drinking_active
         and not reading_active
+        and not photo_active
     ):
 
         junk_message_timer = 60
@@ -620,12 +715,31 @@ while running:
     )
 
 
+    # ---------------- PHOTO DISTANCE ----------------
+
+    mirror_center = mirror_x + mirror_width // 2
+
+    distance_to_mirror = abs(
+        lav_center - mirror_center
+    )
+
+    near_mirror = (
+        distance_to_mirror <= photo_interaction_distance
+        and not photo_complete
+        and not photo_active
+        and not workout_active
+        and not drinking_active
+        and not reading_active
+    )
+
+
     # ---------------- SCREEN POSITIONS ----------------
 
     lav_screen_x = lav_x - camera_x
     junk_screen_x = junk_x - camera_x
     book_screen_x = book_x - camera_x
     dumbbell_screen_x = dumbbell_x - camera_x
+    mirror_screen_x = mirror_x - camera_x
 
 
     # ---------------- DRAW BACKGROUND ----------------
@@ -686,8 +800,30 @@ while running:
         )
 
 
+    # ---------------- DRAW PHOTO MIRROR ----------------
+
+    screen.blit(
+        mirror_image,
+        (mirror_screen_x, mirror_y)
+    )
+
+
     # ---------------- DRAW LAV ----------------
-    if reading_active:
+    if photo_active:
+
+        frame_number = min(
+            int(photo_animation_index),
+            len(photo_frames) - 1
+        )
+
+        current_frame = photo_frames[frame_number]
+
+        screen.blit(
+            current_frame,
+            (lav_screen_x, lav_y)
+        )
+
+    elif reading_active:
 
         frame_number = min(
             int(read_animation_index),
@@ -775,6 +911,28 @@ while running:
         screen.blit(
             workout_prompt,
             (workout_prompt_x, dumbbell_y - 35)
+        )
+
+
+    # ---------------- PRESS P PROMPT ----------------
+
+    if near_mirror:
+
+        photo_prompt = small_font.render(
+            "Press P to Take Photo",
+            True,
+            WHITE
+        )
+
+        prompt_x = (
+            mirror_screen_x
+            + mirror_width // 2
+            - photo_prompt.get_width() // 2
+        )
+
+        screen.blit(
+            photo_prompt,
+            (prompt_x, mirror_y - 30)
         )
 
 
@@ -920,6 +1078,48 @@ while running:
         book_popup_timer -= 1
 
 
+    # ---------------- PHOTO COMPLETION POPUP ----------------
+
+    if photo_popup_timer > 0:
+
+        photo_text = font.render(
+            "PROGRESS PHOTO COMPLETE!",
+            True,
+            WHITE
+        )
+
+        photo_popup_x = (
+            lav_screen_x
+            + lav_width // 2
+            - photo_text.get_width() // 2
+        )
+
+        screen.blit(
+            photo_text,
+            (photo_popup_x, photo_popup_y)
+        )
+
+        photo_popup_y -= 0.5
+        photo_popup_timer -= 1
+
+
+    # ---------------- CAMERA FLASH ----------------
+
+    if photo_flash_timer > 0:
+
+        flash_surface = pygame.Surface(
+            (WIDTH, HEIGHT),
+            pygame.SRCALPHA
+        )
+
+        flash_surface.fill(
+            (255, 255, 255, min(220, photo_flash_timer * 22))
+        )
+
+        screen.blit(flash_surface, (0, 0))
+        photo_flash_timer -= 1
+
+
     # ---------------- 75 HARD HUD ----------------
 
     hud_x = 15
@@ -955,13 +1155,15 @@ while running:
     else:
         workout_status = "--"
 
+    photo_status = "DONE" if photo_complete else "--"
+
     tasks = [
         ("WATER", water_status),
         ("READ", read_status),
         ("WORKOUT", workout_status),
         ("OUTDOOR", "--"),
         ("DIET", "--"),
-        ("PHOTO", "--"),
+        ("PHOTO", photo_status),
     ]
 
     task_y = hud_y + 50
